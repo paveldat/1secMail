@@ -120,25 +120,33 @@ class OneSecMail:
             mail_file_path.parent.mkdir(exist_ok=True, parents=True)
             with open(mail_file_path, 'w') as file:
                 file.write(f'Sender: {sender}\nSubject: {subject}\n' +
-                           f'To: {self.username}@{self.__domain}' +
+                           f'To: {self.username}@{self.__domain}\n' +
                            f'Date: {date}\nContent: {content}')
 
             if self.__save_attachments:
-                print('[INFO] Saving attachments.')
                 files_to_download = []
                 attachments = req.get('attachments')
                 for attachment in attachments:
                     for k, v in attachment.items():
                         if k == 'filename':
                             files_to_download.append(v)
-                for file in files_to_download:
-                    download_files = f'{self.__api}?action=download&{login}'
-                    download_files += f'&id={i}&file={file}'
-                    file_path = mail_file_path.parent / 'attachments' / f'{file}'
-                    file_path.parent.mkdir(exist_ok=True, parents=True)
-                    response = requests.get(download_files)
-                    with open(file_path, mode='wb') as file:
-                        file.write(response.content)
+                if files_to_download:
+                    print('[INFO] Saving attachments.')
+                    with open(mail_file_path, 'a') as file:
+                        file.write(f'Attachments: ' +
+                                   f'{", ".join(files_to_download)}')
+                    for file in files_to_download:
+                        action = 'action=download'
+                        download_files = f'{self.__api}?{action}&{login}'
+                        download_files += f'&id={i}&file={file}'
+                        file_path = mail_file_path.parent / 'attachments'
+                        file_path /= f'{file}'
+                        file_path.parent.mkdir(exist_ok=True, parents=True)
+                        response = requests.get(download_files)
+                        with open(file_path, mode='wb') as file:
+                            file.write(response.content)
+                else:
+                    print('[INFO] No attachments found.')
 
     def delete_mailbox(self) -> None:
         """
